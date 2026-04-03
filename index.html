@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EmoSense · ViT Emotion Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET & VARIABLES ─────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #050810;
+  --surface:   #0d1117;
+  --surface2:  #131a24;
+  --border:    rgba(255,255,255,0.07);
+  --text:      #e2e8f0;
+  --muted:     #4a5568;
+  --accent:    #00f5d4;
+  --accent2:   #7c3aed;
+  --glow:      0 0 40px rgba(0,245,212,0.18);
+
+  --angry:   #FF4444;
+  --disgust: #8BC34A;
+  --fear:    #CE93D8;
+  --happy:   #FFD700;
+  --neutral: #90CAF9;
+  --sad:     #42A5F5;
+  --surprise:#FF9800;
+
+  --font-display: 'Syne', sans-serif;
+  --font-mono:    'Space Mono', monospace;
+}
+
+html, body { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-display);
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* ─── NOISE OVERLAY ─────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ─── LAYOUT ─────────────────────────────────────── */
+.shell {
+  position: relative; z-index: 1;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+  padding: 0 24px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ─── HEADER ─────────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 0 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 28px;
+}
+
+.logo {
+  display: flex; align-items: center; gap: 12px;
+}
+
+.logo-icon {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 10px;
+  display: grid; place-items: center;
+  font-size: 20px;
+}
+
+.logo-text {
+  font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px;
+  background: linear-gradient(90deg, var(--accent), #a78bfa);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.logo-sub {
+  font-family: var(--font-mono);
+  font-size: 0.65rem; color: var(--muted); margin-top: 1px;
+  letter-spacing: 0.08em;
+}
+
+.status-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem; color: var(--muted);
+}
+
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--muted);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.status-dot.live { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 1.5s infinite; }
+.status-dot.error { background: #FF4444; }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ─── MAIN GRID ──────────────────────────────────── */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 20px;
+  align-items: start;
+}
+
+/* ─── PANEL BASE ─────────────────────────────────── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-title {
+  font-size: 0.7rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+.panel-badge {
+  font-family: var(--font-mono); font-size: 0.65rem;
+  color: var(--accent); background: rgba(0,245,212,0.08);
+  border: 1px solid rgba(0,245,212,0.2);
+  border-radius: 4px; padding: 2px 8px;
+}
+
+/* ─── CAMERA PANEL ───────────────────────────────── */
+.camera-panel { grid-column: 1; grid-row: 1; }
+
+.camera-wrap {
+  position: relative;
+  aspect-ratio: 4/3;
+  background: #000;
+  overflow: hidden;
+}
+
+video {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.camera-overlay {
+  position: absolute; inset: 0;
+  pointer-events: none;
+}
+
+/* Corner brackets */
+.bracket {
+  position: absolute; width: 32px; height: 32px;
+  border-color: var(--accent);
+  border-style: solid;
+  opacity: 0.7;
+}
+.bracket.tl { top: 16px; left: 16px; border-width: 2px 0 0 2px; }
+.bracket.tr { top: 16px; right: 16px; border-width: 2px 2px 0 0; }
+.bracket.bl { bottom: 16px; left: 16px; border-width: 0 0 2px 2px; }
+.bracket.br { bottom: 16px; right: 16px; border-width: 0 2px 2px 0; }
+
+.scan-line {
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  top: 0;
+  animation: scan 3s linear infinite;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.scanning .scan-line { opacity: 0.6; }
+@keyframes scan { 0%{top:0%} 100%{top:100%} }
+
+.face-box {
+  position: absolute;
+  border: 2px solid var(--accent);
+  border-radius: 4px;
+  box-shadow: 0 0 12px rgba(0,245,212,0.4), inset 0 0 12px rgba(0,245,212,0.05);
+  transition: all 0.25s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cam-emotion-badge {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  background: rgba(5,8,16,0.85);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 20px;
+  font-size: 0.85rem; font-weight: 700;
+  display: flex; align-items: center; gap: 10px;
+  backdrop-filter: blur(12px);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  opacity: 0;
+  min-width: 160px; justify-content: center;
+}
+
+.cam-emotion-badge .em-emoji { font-size: 1.3rem; }
+.cam-emotion-badge .em-label { letter-spacing: 0.05em; }
+.cam-emotion-badge .em-pct {
+  font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted);
+}
+
+canvas { display: none; }
+
+.cam-controls {
+  padding: 14px 20px;
+  display: flex; align-items: center; gap: 10px;
+}
+
+.btn {
+  font-family: var(--font-display);
+  font-size: 0.8rem; font-weight: 700;
+  border: none; cursor: pointer;
+  border-radius: 8px;
+  padding: 9px 20px;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), #00c9a7);
+  color: #050810;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,245,212,0.35); }
+.btn-secondary {
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { background: #1a2333; }
+
+.fps-counter {
+  margin-left: auto;
+  font-family: var(--font-mono); font-size: 0.65rem; color: var(--muted);
+}
+
+/* ─── DOMINANT EMOTION ───────────────────────────── */
+.dominant-panel { grid-column: 2; grid-row: 1; }
+
+.dominant-display {
+  padding: 24px 20px;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 16px;
+  min-height: 260px;
+}
+
+.dom-emoji {
+  font-size: 5rem;
+  filter: drop-shadow(0 0 20px currentColor);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center;
+  animation: none;
+}
+.dom-emoji.pop { animation: emoPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+@keyframes emoPop { 0%{transform:scale(0.7) rotate(-10deg)} 60%{transform:scale(1.15) rotate(5deg)} 100%{transform:scale(1) rotate(0deg)} }
+
+.dom-label {
+  font-size: 2.2rem; font-weight: 800; letter-spacing: -1px;
+  transition: color 0.4s;
+}
+
+.dom-confidence {
+  font-family: var(--font-mono);
+  font-size: 0.75rem; color: var(--muted);
+}
+
+.dom-bar-wrap {
+  width: 100%; max-width: 240px;
+  background: var(--surface2);
+  border-radius: 99px; height: 6px; overflow: hidden;
+}
+
+.dom-bar {
+  height: 100%; border-radius: 99px;
+  background: var(--accent);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s;
+  width: 0%;
+}
+
+.dom-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  color: var(--muted); font-size: 0.85rem; text-align: center;
+}
+.dom-empty .icon { font-size: 3rem; opacity: 0.3; }
+
+/* ─── EMOTION BARS PANEL ─────────────────────────── */
+.bars-panel { grid-column: 1; grid-row: 2; }
+
+.bars-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+
+.emotion-row {
+  display: grid;
+  grid-template-columns: 28px 90px 1fr 52px;
+  align-items: center; gap: 10px;
+}
+
+.em-icon { font-size: 1.1rem; text-align: center; }
+.em-name {
+  font-family: var(--font-mono); font-size: 0.7rem;
+  color: var(--muted); letter-spacing: 0.04em;
+}
+
+.bar-track {
+  background: var(--surface2); border-radius: 99px;
+  height: 8px; overflow: hidden;
+  position: relative;
+}
+
+.bar-fill {
+  height: 100%; border-radius: 99px;
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+  width: 0%; opacity: 0.85;
+  position: relative;
+}
+.bar-fill::after {
+  content: '';
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: 6px; border-radius: 99px;
+  background: rgba(255,255,255,0.4);
+}
+
+.bar-pct {
+  font-family: var(--font-mono); font-size: 0.68rem;
+  color: var(--text); text-align: right;
+}
+
+/* ─── HISTORY PANEL ──────────────────────────────── */
+.history-panel { grid-column: 2; grid-row: 2; }
+
+.history-body { padding: 16px 20px; }
+
+.sparkline-wrap {
+  display: flex; gap: 4px; align-items: flex-end;
+  height: 60px; margin-bottom: 16px;
+}
+
+.spark-bar {
+  flex: 1; border-radius: 3px 3px 0 0;
+  background: var(--surface2);
+  transition: height 0.3s, background 0.4s;
+  min-height: 4px; max-height: 60px;
+  cursor: default;
+  position: relative;
+}
+.spark-bar::after {
+  content: attr(data-label);
+  position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+  font-size: 0.55rem; color: var(--muted);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.history-log {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 160px; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: var(--surface2) transparent;
+}
+
+.log-entry {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 10px;
+  background: var(--surface2); border-radius: 8px;
+  font-size: 0.72rem;
+  animation: slideIn 0.25s ease;
+}
+@keyframes slideIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:none} }
+
+.log-emoji { font-size: 1rem; }
+.log-label { font-weight: 700; flex: 1; }
+.log-pct { font-family: var(--font-mono); color: var(--muted); font-size: 0.65rem; }
+.log-time { font-family: var(--font-mono); color: var(--muted); font-size: 0.6rem; margin-left: auto; }
+
+/* ─── STATS ROW ──────────────────────────────────── */
+.stats-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+
+.stat-label { font-family: var(--font-mono); font-size: 0.62rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+.stat-value { font-size: 1.6rem; font-weight: 800; letter-spacing: -1px; }
+.stat-sub { font-size: 0.7rem; color: var(--muted); }
+
+/* ─── BACKEND URL BAR ────────────────────────────── */
+.url-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 20px;
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 20px;
+}
+
+.url-bar label {
+  font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted);
+  white-space: nowrap;
+}
+
+.url-input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-family: var(--font-mono); font-size: 0.75rem;
+  color: var(--text);
+  outline: none;
+}
+.url-input:focus { border-color: rgba(0,245,212,0.4); }
+
+/* ─── SCROLLBAR ──────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 99px; }
+
+/* ─── TOAST ──────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 100;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 0.8rem;
+  display: flex; align-items: center; gap: 10px;
+  transform: translateY(80px); opacity: 0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.toast.show { transform: none; opacity: 1; }
+.toast.err { border-color: rgba(255,68,68,0.3); }
+.toast.ok  { border-color: rgba(0,245,212,0.3); }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- ── HEADER ── -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🧠</div>
+      <div>
+        <div class="logo-text">EmoSense</div>
+        <div class="logo-sub">ViT · VISION TRANSFORMER · TRPAKOV</div>
+      </div>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">DISCONNECTED</span>
+    </div>
+  </header>
+
+  <!-- ── BACKEND URL BAR ── -->
+  <div class="url-bar">
+    <label>BACKEND URL</label>
+    <input class="url-input" id="backendUrl" value="http://localhost:5000" placeholder="http://localhost:5000" />
+    <button class="btn btn-secondary" onclick="testBackend()">Test Connection</button>
+  </div>
+
+  <!-- ── MAIN GRID ── -->
+  <div class="main-grid">
+
+    <!-- Camera Panel -->
+    <div class="panel camera-panel">
+      <div class="panel-header">
+        <span class="panel-title">Live Camera Feed</span>
+        <span class="panel-badge" id="fpsLabel">-- FPS</span>
+      </div>
+      <div class="camera-wrap" id="cameraWrap">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="canvas"></canvas>
+        <div class="camera-overlay" id="camOverlay">
+          <div class="bracket tl"></div>
+          <div class="bracket tr"></div>
+          <div class="bracket bl"></div>
+          <div class="bracket br"></div>
+          <div class="scan-line"></div>
+          <div class="face-box" id="faceBox"></div>
+        </div>
+        <div class="cam-emotion-badge" id="camBadge">
+          <span class="em-emoji" id="badgeEmoji">😐</span>
+          <span class="em-label" id="badgeLabel">Detecting…</span>
+          <span class="em-pct" id="badgePct">--</span>
+        </div>
+      </div>
+      <div class="cam-controls">
+        <button class="btn btn-primary" id="startBtn" onclick="startDetection()">▶ Start Detection</button>
+        <button class="btn btn-secondary" id="stopBtn" onclick="stopDetection()" style="display:none">⏹ Stop</button>
+        <span class="fps-counter" id="fpsDisplay">Inference: --ms</span>
+      </div>
+    </div>
+
+    <!-- Dominant Emotion Panel -->
+    <div class="panel dominant-panel">
+      <div class="panel-header">
+        <span class="panel-title">Dominant Emotion</span>
+        <span class="panel-badge" id="confBadge">CONFIDENCE</span>
+      </div>
+      <div class="dominant-display" id="dominantDisplay">
+        <div class="dom-empty">
+          <div class="icon">🎭</div>
+          <div>Start detection to<br>analyse facial expressions</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Emotion Bars Panel -->
+    <div class="panel bars-panel">
+      <div class="panel-header">
+        <span class="panel-title">Emotion Distribution</span>
+        <span class="panel-badge">REAL-TIME</span>
+      </div>
+      <div class="bars-body" id="barsBody">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- History Panel -->
+    <div class="panel history-panel">
+      <div class="panel-header">
+        <span class="panel-title">Emotion History</span>
+        <span class="panel-badge" id="histCount">0 frames</span>
+      </div>
+      <div class="history-body">
+        <div class="sparkline-wrap" id="sparkline"></div>
+        <div class="history-log" id="historyLog">
+          <div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:20px 0">
+            History will appear here…
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Frames Analysed</div>
+        <div class="stat-value" id="statFrames">0</div>
+        <div class="stat-sub">since session start</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg Confidence</div>
+        <div class="stat-value" id="statConf">--%</div>
+        <div class="stat-sub">dominant emotion</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Most Frequent</div>
+        <div class="stat-value" id="statFreq" style="font-size:2rem">--</div>
+        <div class="stat-sub" id="statFreqLabel">emotion in session</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg Latency</div>
+        <div class="stat-value" id="statLatency">--ms</div>
+        <div class="stat-sub">model inference</div>
+      </div>
+    </div>
+
+  </div><!-- end main-grid -->
+</div><!-- end shell -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────
+const INTERVAL_MS   = 400;   // how often to send frames
+const HISTORY_MAX   = 30;    // history log entries
+const SPARKLINE_MAX = 20;    // sparkline bars
+
+// ─── EMOTION METADATA ────────────────────────────────
+const EMOTIONS = [
+  { key:'happy',   emoji:'😊', color:'#FFD700', label:'Happy'   },
+  { key:'neutral', emoji:'😐', color:'#90CAF9', label:'Neutral' },
+  { key:'sad',     emoji:'😢', color:'#42A5F5', label:'Sad'     },
+  { key:'angry',   emoji:'😠', color:'#FF4444', label:'Angry'   },
+  { key:'surprise',emoji:'😲', color:'#FF9800', label:'Surprise'},
+  { key:'fear',    emoji:'😨', color:'#CE93D8', label:'Fear'    },
+  { key:'disgust', emoji:'🤢', color:'#8BC34A', label:'Disgust' },
+];
+const EMOTION_MAP = Object.fromEntries(EMOTIONS.map(e => [e.key, e]));
+
+// ─── STATE ───────────────────────────────────────────
+let video, canvas, ctx, intervalId;
+let running = false;
+let frameCount = 0, totalConf = 0, totalLatency = 0;
+let freqMap = {};
+let history = [];      // {emotion, pct, time}
+let sparkData = [];    // emotion keys for sparkline
+let lastDominant = null;
+let fpsTimer = 0, fpsCount = 0, currentFPS = 0;
+
+// ─── INIT ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  video  = document.getElementById('video');
+  canvas = document.getElementById('canvas');
+  ctx    = canvas.getContext('2d');
+  initBars();
+  initSparkline();
+});
+
+function getBackendUrl() {
+  return document.getElementById('backendUrl').value.trim().replace(/\/$/, '');
+}
+
+// ─── TEST CONNECTION ──────────────────────────────────
+async function testBackend() {
+  try {
+    const r = await fetch(`${getBackendUrl()}/health`, { signal: AbortSignal.timeout(4000) });
+    const d = await r.json();
+    setStatus('live');
+    toast(`Connected · ${d.model}`, 'ok');
+  } catch {
+    setStatus('error');
+    toast('Cannot reach backend. Is Flask running?', 'err');
+  }
+}
+
+// ─── START / STOP ─────────────────────────────────────
+async function startDetection() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width:640, height:480 } });
+    video.srcObject = stream;
+    await video.play();
+  } catch {
+    toast('Camera access denied', 'err'); return;
+  }
+  canvas.width  = video.videoWidth  || 640;
+  canvas.height = video.videoHeight || 480;
+
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('stopBtn').style.display  = '';
+  document.getElementById('cameraWrap').classList.add('scanning');
+
+  running = true; frameCount = 0; totalConf = 0; totalLatency = 0;
+  freqMap = {}; history = []; sparkData = [];
+  updateStats();
+  setStatus('live');
+
+  intervalId = setInterval(analyseFrame, INTERVAL_MS);
+}
+
+function stopDetection() {
+  running = false;
+  clearInterval(intervalId);
+  if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+  document.getElementById('startBtn').style.display = '';
+  document.getElementById('stopBtn').style.display  = 'none';
+  document.getElementById('cameraWrap').classList.remove('scanning');
+  document.getElementById('camBadge').style.opacity = '0';
+  document.getElementById('faceBox').style.opacity  = '0';
+  setStatus('disconnected');
+}
+
+// ─── ANALYSE FRAME ────────────────────────────────────
+async function analyseFrame() {
+  if (!running) return;
+  try {
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const b64 = canvas.toDataURL('image/jpeg', 0.7);
+
+    const t0 = performance.now();
+    const res = await fetch(`${getBackendUrl()}/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: b64 }),
+      signal: AbortSignal.timeout(5000)
+    });
+    const latency = Math.round(performance.now() - t0);
+    const data = await res.json();
+    if (data.error) { toast(data.error, 'err'); return; }
+
+    frameCount++;
+    totalConf += data.dominant.percentage;
+    totalLatency += latency;
+    freqMap[data.dominant.label] = (freqMap[data.dominant.label] || 0) + 1;
+
+    history.unshift({ emotion: data.dominant.label, pct: data.dominant.percentage, emoji: data.dominant.emoji, time: new Date().toLocaleTimeString() });
+    if (history.length > HISTORY_MAX) history.pop();
+
+    sparkData.unshift(data.dominant.label);
+    if (sparkData.length > SPARKLINE_MAX) sparkData.pop();
+
+    updateDominant(data.dominant);
+    updateBars(data.emotions);
+    updateHistoryLog();
+    updateSparkline();
+    updateStats(latency);
+    updateCamBadge(data.dominant);
+    animateFaceBox();
+
+    document.getElementById('fpsDisplay').textContent = `Inference: ${latency}ms`;
+  } catch (e) {
+    setStatus('error');
+    toast('Inference failed – check backend', 'err');
+    stopDetection();
+  }
+}
+
+// ─── UPDATE DOMINANT ──────────────────────────────────
+function updateDominant(dom) {
+  const changed = !lastDominant || lastDominant.label !== dom.label;
+  lastDominant = dom;
+
+  const meta = EMOTION_MAP[dom.label] || { emoji:'❓', color:'#888', label: dom.label };
+  const pct  = dom.percentage.toFixed(1);
+
+  document.getElementById('dominantDisplay').innerHTML = `
+    <div class="dom-emoji${changed?' pop':''}" style="color:${meta.color}">${meta.emoji}</div>
+    <div class="dom-label" style="color:${meta.color}">${meta.label}</div>
+    <div class="dom-confidence">${pct}% confidence</div>
+    <div class="dom-bar-wrap">
+      <div class="dom-bar" style="width:${pct}%;background:${meta.color}"></div>
+    </div>
+  `;
+  document.getElementById('confBadge').textContent = `${pct}% CONF`;
+}
+
+// ─── INIT & UPDATE BARS ───────────────────────────────
+function initBars() {
+  const body = document.getElementById('barsBody');
+  body.innerHTML = EMOTIONS.map(e => `
+    <div class="emotion-row" id="row-${e.key}">
+      <span class="em-icon">${e.emoji}</span>
+      <span class="em-name">${e.label.toUpperCase()}</span>
+      <div class="bar-track">
+        <div class="bar-fill" id="bar-${e.key}" style="background:${e.color};width:0%"></div>
+      </div>
+      <span class="bar-pct" id="pct-${e.key}">0%</span>
+    </div>
+  `).join('');
+}
+
+function updateBars(emotions) {
+  const map = {};
+  emotions.forEach(e => map[e.label] = e);
+  EMOTIONS.forEach(e => {
+    const d = map[e.key] || { percentage: 0 };
+    document.getElementById(`bar-${e.key}`).style.width = d.percentage + '%';
+    document.getElementById(`pct-${e.key}`).textContent  = d.percentage.toFixed(0) + '%';
+  });
+}
+
+// ─── HISTORY LOG ──────────────────────────────────────
+function updateHistoryLog() {
+  const log = document.getElementById('historyLog');
+  document.getElementById('histCount').textContent = `${history.length} frames`;
+  if (history.length === 0) return;
+  log.innerHTML = history.map(h => `
+    <div class="log-entry">
+      <span class="log-emoji">${h.emoji}</span>
+      <span class="log-label" style="color:${(EMOTION_MAP[h.emotion.toLowerCase()]||{}).color||'#eee'}">${h.emotion}</span>
+      <span class="log-pct">${h.pct.toFixed(1)}%</span>
+      <span class="log-time">${h.time}</span>
+    </div>
+  `).join('');
+}
+
+// ─── SPARKLINE ────────────────────────────────────────
+function initSparkline() {
+  const wrap = document.getElementById('sparkline');
+  wrap.innerHTML = Array.from({length: SPARKLINE_MAX}, (_,i) => `
+    <div class="spark-bar" id="spark-${i}" style="height:4px;background:var(--surface2)"></div>
+  `).join('');
+}
+
+function updateSparkline() {
+  sparkData.forEach((key, i) => {
+    const bar = document.getElementById(`spark-${i}`);
+    if (!bar) return;
+    const meta = EMOTION_MAP[key.toLowerCase()] || { color:'#555' };
+    // get score from history if available
+    const h = history[i];
+    const h_pct = h ? h.pct : 50;
+    bar.style.height = `${Math.max(4, h_pct * 0.6)}px`;
+    bar.style.background = meta.color;
+    bar.setAttribute('data-label', (EMOTION_MAP[key.toLowerCase()]||{}).label||key);
+  });
+}
+
+// ─── STATS ───────────────────────────────────────────
+function updateStats(latency) {
+  document.getElementById('statFrames').textContent = frameCount;
+  document.getElementById('statConf').textContent   = frameCount ? (totalConf / frameCount).toFixed(1) + '%' : '--%';
+  document.getElementById('statLatency').textContent= frameCount ? Math.round(totalLatency / frameCount) + 'ms' : '--ms';
+
+  // most frequent
+  const [topKey] = Object.entries(freqMap).sort((a,b)=>b[1]-a[1])[0] || ['--', 0];
+  const topMeta = EMOTION_MAP[topKey.toLowerCase()] || {};
+  document.getElementById('statFreq').textContent      = topMeta.emoji || '--';
+  document.getElementById('statFreqLabel').textContent = topKey || 'emotion in session';
+}
+
+// ─── CAM BADGE ───────────────────────────────────────
+function updateCamBadge(dom) {
+  const badge = document.getElementById('camBadge');
+  const meta  = EMOTION_MAP[dom.label] || { emoji:'❓', color:'#888', label: dom.label };
+  document.getElementById('badgeEmoji').textContent = meta.emoji;
+  document.getElementById('badgeLabel').textContent = meta.label;
+  document.getElementById('badgePct').textContent   = dom.percentage.toFixed(1) + '%';
+  badge.style.opacity = '1';
+  badge.style.borderColor = meta.color + '55';
+  badge.style.boxShadow   = `0 0 20px ${meta.color}22`;
+}
+
+// ─── FACE BOX (animated placeholder) ─────────────────
+function animateFaceBox() {
+  const box = document.getElementById('faceBox');
+  // Centre-ish in the video
+  const W = video.offsetWidth, H = video.offsetHeight;
+  const bw = W * 0.38, bh = H * 0.55;
+  box.style.width  = bw + 'px';
+  box.style.height = bh + 'px';
+  box.style.left   = (W - bw) / 2 + 'px';
+  box.style.top    = (H - bh) / 2 - H*0.05 + 'px';
+  box.style.opacity = '1';
+}
+
+// ─── STATUS ──────────────────────────────────────────
+function setStatus(state) {
+  const dot  = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  dot.className = 'status-dot';
+  if (state === 'live')         { dot.classList.add('live');  text.textContent = 'LIVE'; }
+  else if (state === 'error')   { dot.classList.add('error'); text.textContent = 'ERROR'; }
+  else                          { text.textContent = 'DISCONNECTED'; }
+}
+
+// ─── TOAST ───────────────────────────────────────────
+let toastTimer;
+function toast(msg, type='ok') {
+  const el = document.getElementById('toast');
+  el.className = `toast ${type} show`;
+  el.textContent = (type==='ok' ? '✓ ' : '⚠ ') + msg;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
