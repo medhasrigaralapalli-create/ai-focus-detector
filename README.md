@@ -58,6 +58,41 @@ Setup Instructions
 
 ---
 
+## Run locally
+### Backend
+```bash
+cd "ai-project/files"
+py -3.14 -m pip install -r requirements.txt
+py -3.14 app.py
+```
+Server: http://localhost:5000 (downloads ~350 MB model on first run).
+
+### Frontend (React)
+```bash
+cd "files/reaact"
+$env:PORT=3001; npm install
+$env:PORT=3001; npm start
+```
+Open http://localhost:3001.
+
+---
+
+## API
+- `POST /predict` with body `{ "image": "<base64-jpeg>" }` → returns `dominant`, `emotions[]`, optional `face_patch`, timing.
+- `GET /health` → `{ "status": "ok", "model": "trpakov/vit-face-expression" }`
+
+---
+
+## Model facts
+- Model: `trpakov/vit-face-expression`
+- Architecture: ViT-Base-Patch16-224
+- Classes: happy, sad, angry, fear, disgust, surprise, neutral
+- Input: 224x224 RGB
+
+---
+
+---
+
  Use Cases
 
 * Online Proctoring Systems
@@ -92,7 +127,7 @@ Email: [pratithi04rani@gmail.com](mailto:pratithi04rani@gmail.com)
 LinkedIn:  [https://www.linkedin.com/in/pratithi-chawla-90521a360/](https://www.linkedin.com/in/pratithi-chawla-90521a360/)
 
 --- 
-read Backend Framework.txt and Features.txt for Features, Limitations and Future Scope
+read Backend Framework.txt and Features.txt for Features, Limitations and Future Scope for more info
 
 ---
 
