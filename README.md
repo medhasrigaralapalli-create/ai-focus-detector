@@ -138,6 +138,8 @@ Limitations
 * Improved accuracy using custom-trained models
 
 read Backend Framework.txt and Features.txt for Features, Limitations and Future Scope for more info
+
+
 ---
 
 Point of Contact
@@ -146,7 +148,9 @@ Name: Pratithi Rani Chawla
 Email: [pratithi04rani@gmail.com](mailto:pratithi04rani@gmail.com)
 LinkedIn:  [https://www.linkedin.com/in/pratithi-chawla-90521a360/](https://www.linkedin.com/in/pratithi-chawla-90521a360/)
 
+
 --- 
+
 
 <img width="760" height="891" alt="image" src="https://github.com/user-attachments/assets/a6db972e-8145-48fe-9438-e10d29e1d1c4" />
 
