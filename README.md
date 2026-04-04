@@ -50,15 +50,11 @@ Camera Input
 
 ---
 
-Setup Instructions                                                                               1. Clone Repository
-
-git clone https://github.com/iamprc4/ai-focus-detector           2. Navigate to Folder
-
-cd ai-focus-detector                                                                      3. Install Dependencies
-
-pip install -r requirements.txt                                                      4. Run Project
-
-python main.py
+Setup Instructions                                                                               
+1. Clone Repository - git clone https://github.com/iamprc4/ai-focus-detector
+2.Navigate to Folder - cd ai-focus-detector                                                                      
+3. Install Dependencies - pip install -r requirements.txt                                                      
+4. Run Project - python main.py
 
 ---
 
@@ -95,9 +91,7 @@ Name: Pratithi Rani Chawla
 Email: [pratithi04rani@gmail.com](mailto:pratithi04rani@gmail.com)
 LinkedIn:  [https://www.linkedin.com/in/pratithi-chawla-90521a360/](https://www.linkedin.com/in/pratithi-chawla-90521a360/)
 
----
-
-Demo 
+--- 
 <img width="760" height="891" alt="image" src="https://github.com/user-attachments/assets/a6db972e-8145-48fe-9438-e10d29e1d1c4" />
 
 
