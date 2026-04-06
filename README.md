@@ -1,12 +1,13 @@
 # AI Behavior Intrusion Detection System
 
-## Overview
+## Overview:
 
+An AI-based system that detects user focus, intrusion, emotions, and gadget usage in real-time using computer vision and deep learning.
 Traditional CCTV systems lack real-time intelligent behavior analysis. This project presents an AI-based monitoring system that detects intrusion, user focus, gadgets (like mobile phones), and human emotions using computer vision and deep learning techniques. The system processes live video feeds and generates alerts to improve security and monitoring efficiency.
 
 ---
 
-## Features
+## Features:
 
 * Real-time Intrusion Detection
 * Emotion Recognition (Happy, Sad, Neutral, etc.)
@@ -18,6 +19,7 @@ Traditional CCTV systems lack real-time intelligent behavior analysis. This proj
 ---
 
 # Tech Stack:
+
 * **Programming Language:** Python
 * **Libraries & Frameworks:** OpenCV, NumPy, TensorFlow / Keras
 * **Concepts Used:** Computer Vision, Deep Learning, Image Processing
@@ -25,6 +27,7 @@ Traditional CCTV systems lack real-time intelligent behavior analysis. This proj
 ---
 
 # Installation:
+
 1. Clone the repository:
 
 ```bash
@@ -46,6 +49,7 @@ pip install -r requirements.txt
 ---
 
 # How to Run:
+
 ```bash
 python app.py
 ```
@@ -55,7 +59,7 @@ python app.py
 
 # Project Structure:
 ```
-ai-focus-detector/
+ai-behavior-intrusion-system/
 │── app.py # Main execution file
 │── react/ # Frontend (if used)
 │── files/ # Supporting files
@@ -68,6 +72,7 @@ ai-focus-detector/
 ---
 
 # Output / Demo:
+
 ![Output Screenshot](image.png)
 [Watch Demo](https://youtu.be/DP7YOpY0cC4)
 
@@ -79,6 +84,7 @@ Example:
 ---
 
 # Use Cases:
+
 * Smart Surveillance Systems
 * Examination Monitoring (anti-cheating system)
 * Workplace Monitoring
@@ -87,6 +93,7 @@ Example:
 ---
 
 # Future Improvements:
+
 * Improve model accuracy with advanced architectures
 * Add cloud-based alert system (SMS/Email)
 * Deploy as a web application
@@ -96,6 +103,7 @@ Example:
 ---
 
 # Contributors:
+
 * G.Medha Sri
 * Pratithi Rani Chawla
 * Kondapally Jayashankar
