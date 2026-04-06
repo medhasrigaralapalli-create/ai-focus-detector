@@ -55,13 +55,14 @@ python app.py
 
 # Project Structure:
 ```
-ai-behavior-intrusion-system/
-│── main.py                # Main execution file
-│── detection/             # Detection modules (face, object, emotion)
-│── models/                # Pre-trained models
-│── utils/                 # Helper functions
-│── requirements.txt       # Dependencies
-│── README.md              # Project documentation
+ai-focus-detector/
+│── app.py # Main execution file
+│── react/ # Frontend (if used)
+│── files/ # Supporting files
+│── index.html # Web interface
+│── image.png # Output screenshot
+│── requirements.txt # Dependencies
+│── README.md # Documentation
 ```
 
 ---
